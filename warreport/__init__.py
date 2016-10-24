@@ -50,10 +50,10 @@ def _setup_logging(logging_config):
         }
     }
 
-    if logging_config["console_debug"]:
+    if logging_config.get("console_debug", False):
         dict_config["handlers"]["console"]["level"] = "DEBUG"
 
-    if logging_config["file_debug"]:
+    if logging_config.get("file_debug", False):
         dict_config["handlers"]["debug_file"] = {
             "class": "logging.FileHandler",
             "formatter": "full",
@@ -72,7 +72,7 @@ def _set_database(database_config):
     database = database_config.get('database', 0)
 
     redis_conn = redis.StrictRedis(host=host, port=port, db=database)
-
+    logging.getLogger("warreport").info("Database connected successfully.")
 
 # TODO: maybe we want to be more OOP and have specific instances of the application instead of one per python instance?
 def _setup():

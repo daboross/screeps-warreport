@@ -60,7 +60,7 @@ def get_battledata(room_name, center_tick):
             data_caching.set_battledata_not_yet_avail(room_name, start_tick)
             return None
         elif result.status_code != 200:
-            logging.warning("Non-404 error accessing battle data! Error: {} ({}), url: {}"
+            logger.warning("Non-404 error accessing battle data! Error: {} ({}), url: {}"
                             .format(result.content, result.status_code, result.url))
             data_caching.set_battledata_not_yet_avail(room_name, start_tick)
             return None
@@ -78,7 +78,7 @@ def get_battledata(room_name, center_tick):
     try:
         player_counts = {username_from_id(user_id): count for user_id, count in player_to_bodycounts.items()}
     except ScreepsError as e:
-        logging.warning("Couldn't find username(s)! Error: {}, player_counts: {}".format(e, player_to_bodycounts))
+        logger.warning("Couldn't find username(s)! Error: {}, player_counts: {}".format(e, player_to_bodycounts))
         data_caching.set_battledata_not_yet_avail(room_name, start_tick)
         return None
     data_caching.set_player_counts(room_name, start_tick, player_counts)
