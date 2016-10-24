@@ -1,0 +1,12 @@
+{
+    "redis": {
+        "host": "localhost",
+        "port": 6379,
+        "database": 0,
+        "prefix": "screeps:warreport:"
+    },
+    "logging": {
+        "directory": "logs"
+    },
+    "slack_url": "https://hooks.slack.com/services/XXX/YYY/ZZZ"
+}
