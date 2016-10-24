@@ -7,6 +7,7 @@ from warreport import redis_conn as redis, screeps_api, data_caching, screeps_in
 
 _LAST_CHECKED_TICK_KEY = "screeps:warreport:last-checked-tick"
 _LAST_CHECKED_EXPIRE_SECONDS = 30 * 60
+_SEND_TO_BACK_OF_QUEUE_IF_OLDER_THAN_TICKS = 2000
 
 logger = logging.getLogger("warreport")
 
@@ -44,7 +45,24 @@ def process_battles(loop):
             battle_info = yield from loop.run_in_executor(
                 None, lambda: screeps_info.get_battledata(room_name, hostilities_tick))
             if battle_info is None:
-                yield from asyncio.sleep(2 * 60, loop=loop)
+                latest_tick = yield from loop.run_in_executor(None, redis.get, _LAST_CHECKED_TICK_KEY)
+                if latest_tick is not None and int(latest_tick) - int(hostilities_tick) \
+                        > _SEND_TO_BACK_OF_QUEUE_IF_OLDER_THAN_TICKS:
+                    logger.debug("Battle in {} at {} is {} ticks old - sending to back of queue.".format(
+                        room_name, hostilities_tick, int(latest_tick) - int(hostilities_tick)))
+                    yield from loop.run_in_executor(None, data_caching.add_battle_to_queue, room_name, hostilities_tick)
+                    yield from loop.run_in_executor(None, data_caching.finished_battle, room_name, hostilities_tick)
+                    # Don't sleep quite as long, but we still don't want to be constantly checking if the only battles
+                    # in our queue are old battles.
+                    # It is still OK to sleep this short though, since each individual room's "unavailable" status is
+                    # cached for one minute.
+                    yield from asyncio.sleep(5, loop=loop)
+                    break
+                # Cache expires in 60 seconds.
+                yield from asyncio.sleep(90, loop=loop)
+
+        if battle_info is None:
+            continue  # We've chosen to skip this one
 
         assert isinstance(battle_info, dict)
 
