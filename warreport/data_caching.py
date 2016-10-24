@@ -79,5 +79,5 @@ def get_next_battle_blocking():
 
 def finished_battle(room_name, start_tick):
     current = cache_connection.get(CURRENTLY_PROCESSING_KEY)
-    if current.decode() == '{}:{}'.format(room_name, start_tick):
+    if current and current.decode() == '{}:{}'.format(room_name, start_tick):
         cache_connection.delete(CURRENTLY_PROCESSING_KEY)

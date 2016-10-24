@@ -79,13 +79,15 @@ def get_battledata(room_name, center_tick):
                 if obj_data.get('type') == 'creep' and creep_id not in creeps_found:
                     creeps_found.add(creep_id)
                     owner = obj_data['user']
-                    # I've seen user_id 2 somewhere, not sure what it represents but I think it's either source keepers
-                    # or invaders. I'm assuming there's a '1' too, since '2' exists... Anyways, can't hurt to add an
-                    # exception here, since neither one is a valid regular user ID.
-                    if owner != '2' and owner != '1':
-                        counter = player_to_bodycounts[owner]
-                        for part in obj_data['body']:
-                            counter[part['type']] += 1
+                    # I've seen user_id 2 and 3 both somewhere, not sure what it represents but I think it's either
+                    # source keepers or invaders. I'm assuming there's a '1' too, since '2' exists... Anyways, can't
+                    # hurt to add an exception here, since neither one is a valid regular user ID.
+                    # NOTE: user_id 2 is confirmed to be invader. I don't know what user_id 3 is.
+                    if owner.isdigit() and int(owner) < 10:
+                        continue
+                    counter = player_to_bodycounts[owner]
+                    for part in obj_data['body']:
+                        counter[part['type']] += 1
                 action_log = obj_data.get('action_log')
                 if action_log and (action_log.get('attack') or action_log.get('rangedAttack') or action_log.get('heal')
                                    or action_log.get('rangedMassAttack')):
