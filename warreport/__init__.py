@@ -74,6 +74,7 @@ def _set_database(database_config):
     redis_conn = redis.StrictRedis(host=host, port=port, db=database)
     logging.getLogger("warreport").info("Database connected successfully.")
 
+
 # TODO: maybe we want to be more OOP and have specific instances of the application instead of one per python instance?
 def _setup():
     default_database_config = {

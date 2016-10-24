@@ -27,11 +27,12 @@ def username_from_id(user_id):
     if call_result.ok:
         name = call_result.json().get('user', {}).get('username', None)
         if name is None:
-            raise ScreepsError("{} (at api/user/find?id={})".format(call_result.content, user_id))
+            raise ScreepsError("{} ({}, at {})".format(call_result.text, call_result.status_code, call_result.url))
         data_caching.set_username(user_id, name)
         return name
     else:
-        raise ScreepsError("{} (at api/user/find?id={})".format(call_result.content, user_id))
+        raise ScreepsError("{} ({}, at {})".format(call_result.text, call_result.status_code,
+                                                   call_result.url))
 
 
 def get_battledata(room_name, center_tick):
@@ -61,7 +62,7 @@ def get_battledata(room_name, center_tick):
             return None
         elif result.status_code != 200:
             logger.warning("Non-404 error accessing battle data! Error: {} ({}), url: {}"
-                           .format(result.content, result.status_code, result.url))
+                           .format(result.text, result.status_code, result.url))
             data_caching.set_battledata_not_yet_avail(room_name, start_tick)
             return None
         json_root = result.json()

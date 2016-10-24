@@ -21,7 +21,7 @@ def grab_new_battles(loop):
             battles = yield from loop.run_in_executor(None, lambda: screeps_api.battles(sinceTick=last_grabbed_tick))
         else:
             battles = yield from loop.run_in_executor(None, lambda: screeps_api.battles(interval=2000))
-        if battles.get('ok'):
+        if battles and battles.get('ok'):
             last_grabbed_tick = battles.get('time')
             if len(battles['rooms']):
                 yield from asyncio.gather(
@@ -51,7 +51,7 @@ def process_battles(loop):
         if should_report(battle_info):
             # TODO: get first hostility tick as part of battle data!
             text = "Battle in <https://screeps.com/a/#!/history/{}?t={}|{}>: {}" \
-                .format(room_name, hostilities_tick - 10, room_name,
+                .format(room_name, int(hostilities_tick) - 10, room_name,
                         " vs. ".join("{} ({} total parts)".format(name, parts)
                                      for name, parts in battle_info['player_counts'].items()))
             if SLACK_URL is None:
@@ -66,7 +66,7 @@ def process_battles(loop):
                 assert isinstance(slack_response, requests.Response)
                 if slack_response.status_code != 200:
                     logger.error("Couldn't post to slack! {} ({}, for payload {})"
-                                 .format(slack_response.content, slack_response.status_code, payload))
+                                 .format(slack_response.text, slack_response.status_code, payload))
                     continue  # < don't mark as finished
         else:
             logger.debug("Skipping battle in {} at {} ({})."
