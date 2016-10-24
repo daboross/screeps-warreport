@@ -35,7 +35,7 @@ def get_player_counts(room_name, start_tick):
     # hgetall will return an empty dict for a hash which doesn't exist - we bypass this by adding a '_checked' field.
     raw = cache_connection.hgetall(key)
     if len(raw):
-        return {k.decode(): v.decode() for k, v in raw[1].items() if k != '__$checked'}
+        return {k.decode(): v.decode() for k, v in raw.items() if k != '__$checked'}
 
 
 def set_player_counts(room_name, start_tick, data_dict):
