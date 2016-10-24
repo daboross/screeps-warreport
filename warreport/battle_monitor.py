@@ -45,22 +45,36 @@ def process_battles(loop):
                 None, lambda: screeps_info.get_battledata(room_name, hostilities_tick))
             if battle_info is None:
                 yield from asyncio.sleep(2 * 60, loop=loop)
-        text = "Battle in <https://screeps.com/a/#!/history/{}?t={}|{}>: {}" \
-            .format(room_name, hostilities_tick, room_name,
-                    " vs. ".join("{} ({} total parts)".format(name, parts)
-                                 for name, parts in battle_info['player_counts'].items()))
-        if SLACK_URL is None:
-            logger.info(text)
+
+        assert isinstance(battle_info, dict)
+
+        if should_report(battle_info):
+            # TODO: get first hostility tick as part of battle data!
+            text = "Battle in <https://screeps.com/a/#!/history/{}?t={}|{}>: {}" \
+                .format(room_name, hostilities_tick - 10, room_name,
+                        " vs. ".join("{} ({} total parts)".format(name, parts)
+                                     for name, parts in battle_info['player_counts'].items()))
+            if SLACK_URL is None:
+                logger.info(text)
+            else:
+                # TODO: another queue of messages in redis for posting to slack, so we can keep processing more data and
+                # post to slack at the same time
+                payload = {
+                    "text": text,
+                }
+                slack_response = yield from loop.run_in_executor(None, lambda: requests.post(SLACK_URL, json=payload))
+                assert isinstance(slack_response, requests.Response)
+                if slack_response.status_code != 200:
+                    logger.error("Couldn't post to slack! {} ({}, for payload {})"
+                                 .format(slack_response.content, slack_response.status_code, payload))
+                    continue  # < don't mark as finished
         else:
-            # TODO: another queue of messages in redis for posting to slack, so we can keep processing more data and
-            # post to slack at the same time
-            payload = {
-                "text": text,
-            }
-            slack_response = yield from loop.run_in_executor(None, lambda: requests.post(SLACK_URL, json=payload))
-            assert isinstance(slack_response, requests.Response)
-            if slack_response.status_code != 200:
-                logger.error("Couldn't post to slack! {} ({}, for payload {})"
-                             .format(slack_response.content, slack_response.status_code, payload))
-                continue  # < don't mark as finished
-            yield from loop.run_in_executor(None, data_caching.finished_battle, room_name, hostilities_tick)
+            logger.debug("Skipping battle in {} at {} ({})."
+                         .format(room_name, hostilities_tick,
+                                 " vs. ".join("{} ({} total parts)".format(name, parts)
+                                              for name, parts in battle_info['player_counts'].items())))
+        yield from loop.run_in_executor(None, data_caching.finished_battle, room_name, hostilities_tick)
+
+
+def should_report(battle_info):
+    return len(battle_info['player_counts']) >= 2

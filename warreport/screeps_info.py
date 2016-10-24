@@ -61,7 +61,7 @@ def get_battledata(room_name, center_tick):
             return None
         elif result.status_code != 200:
             logger.warning("Non-404 error accessing battle data! Error: {} ({}), url: {}"
-                            .format(result.content, result.status_code, result.url))
+                           .format(result.content, result.status_code, result.url))
             data_caching.set_battledata_not_yet_avail(room_name, start_tick)
             return None
         json_root = result.json()
@@ -74,7 +74,11 @@ def get_battledata(room_name, center_tick):
                 if obj_data.get('type') == 'creep' and creep_id not in creeps_found:
                     creeps_found.add(creep_id)
                     owner = obj_data['user']
-                    player_to_bodycounts[owner] += len(obj_data['body'])  # super boring atm
+                    # I've seen user_id 2 somewhere, not sure what it represents but I think it's either source keepers
+                    # or invaders. I'm assuming there's a '1' too, since '2' exists... Anyways, can't hurt to add an
+                    # exception here, since neither one is a valid regular user ID.
+                    if owner != '2' and owner != '1':
+                        player_to_bodycounts[owner] += len(obj_data['body'])  # super boring atm
     try:
         player_counts = {username_from_id(user_id): count for user_id, count in player_to_bodycounts.items()}
     except ScreepsError as e:
