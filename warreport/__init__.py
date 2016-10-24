@@ -110,4 +110,4 @@ def _setup():
 
 _setup()
 
-from . import data_caching, screeps_info, battle_monitor
+from . import data_caching, screeps_info, battle_monitor, battle_reporting

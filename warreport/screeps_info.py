@@ -88,10 +88,11 @@ def get_battle_data(room_name, center_tick):
                     counter = player_to_bodycounts[owner]
                     for part in obj_data['body']:
                         counter[part['type']] += 1
-                action_log = obj_data.get('action_log')
-                if action_log and (action_log.get('attack') or action_log.get('rangedAttack') or action_log.get('heal')
-                                   or action_log.get('rangedMassAttack')):
-                    if first_hostilities_tick is None or tick < first_hostilities_tick:
+                if first_hostilities_tick is None or tick < first_hostilities_tick:
+                    action_log = obj_data.get('action_log')
+                    if action_log and (action_log.get('attack') or action_log.get('rangedAttack')
+                                       or action_log.get('rangedMassAttack')
+                                       or action_log.get('heal') or action_log.get('rangedHeal')):
                         first_hostilities_tick = tick
 
     try:
