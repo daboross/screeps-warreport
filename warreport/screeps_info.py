@@ -36,7 +36,7 @@ def username_from_id(user_id):
                                                    call_result.url))
 
 
-def get_battledata(room_name, center_tick):
+def get_battle_data(room_name, center_tick):
     center_tick = int(center_tick)
     if center_tick % 60 < 20:
         # start_tick is 60-79 earlier
@@ -51,7 +51,7 @@ def get_battledata(room_name, center_tick):
     cached_battle_data = data_caching.get_battle_data(room_name, start_tick)
     if cached_battle_data is not None:
         return cached_battle_data
-    if data_caching.get_battledata_not_yet_avail(room_name, start_tick):
+    if data_caching.get_battle_data_not_yet_avail(room_name, start_tick):
         return None
 
     first_hostilities_tick = None
@@ -62,12 +62,12 @@ def get_battledata(room_name, center_tick):
         result = requests.get(HISTORY_URL_FORMAT.format(room=room_name, tick=tick_to_call))
         if result.status_code == 404:
             logger.debug("Checked data for room {} tick {}: not generated yet (404).".format(room_name, tick_to_call))
-            data_caching.set_battledata_not_yet_avail(room_name, start_tick)
+            data_caching.set_battle_data_not_yet_avail(room_name, start_tick)
             return None
         elif result.status_code != 200:
             logger.warning("Non-404 error accessing battle data! Error: {} ({}), url: {}"
                            .format(result.text, result.status_code, result.url))
-            data_caching.set_battledata_not_yet_avail(room_name, start_tick)
+            data_caching.set_battle_data_not_yet_avail(room_name, start_tick)
             return None
         json_root = result.json()
         for tick, tick_data in json_root['ticks'].items():
@@ -98,7 +98,7 @@ def get_battledata(room_name, center_tick):
         player_counts = {username_from_id(user_id): data for user_id, data in player_to_bodycounts.items()}
     except ScreepsError as e:
         logger.warning("Couldn't find username(s)! Error: {}, player_counts: {}".format(e, player_to_bodycounts))
-        data_caching.set_battledata_not_yet_avail(room_name, start_tick)
+        data_caching.set_battle_data_not_yet_avail(room_name, start_tick)
         return None
     battle_data = {
         "room": room_name,

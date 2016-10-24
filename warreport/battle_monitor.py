@@ -43,7 +43,7 @@ def process_battles(loop):
         battle_info = None
         while battle_info is None:
             battle_info = yield from loop.run_in_executor(
-                None, lambda: screeps_info.get_battledata(room_name, hostilities_tick))
+                None, lambda: screeps_info.get_battle_data(room_name, hostilities_tick))
             if battle_info is None:
                 latest_tick = yield from loop.run_in_executor(None, redis.get, _LAST_CHECKED_TICK_KEY)
                 if latest_tick is not None and int(latest_tick) - int(hostilities_tick) \

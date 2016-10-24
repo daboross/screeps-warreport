@@ -1,8 +1,9 @@
 import json
+
 from warreport import redis_conn as cache_connection
 
-__all__ = ["get_username", "set_username", "get_battle_data", "set_battle_data", "get_battledata_not_yet_avail",
-           "set_battledata_not_yet_avail"]
+__all__ = ["get_username", "set_username", "get_battle_data", "set_battle_data", "get_battle_data_not_yet_avail",
+           "set_battle_data_not_yet_avail"]
 
 USERNAME_KEY = "screeps:warreport:username:{}"
 USERNAME_EXPIRE = 60 * 60 * 5
@@ -46,12 +47,12 @@ def set_battle_data(room_name, start_tick, data_dict):
     cache_connection.set(key, json.dumps(data_dict))
 
 
-def get_battledata_not_yet_avail(room_name, start_tick):
+def get_battle_data_not_yet_avail(room_name, start_tick):
     key = NO_BATTLE_DATA_KEY.format(room_name, start_tick)
     return cache_connection.get(key)
 
 
-def set_battledata_not_yet_avail(room_name, start_tick):
+def set_battle_data_not_yet_avail(room_name, start_tick):
     key = NO_BATTLE_DATA_KEY.format(room_name, start_tick)
     cache_connection.set(key, 1, ex=NO_BATTLE_DATA_EXPIRE)
 
