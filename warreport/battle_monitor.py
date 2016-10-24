@@ -54,7 +54,7 @@ def process_battles(loop):
                     yield from loop.run_in_executor(None, data_caching.add_battle_to_processing_queue, room_name,
                                                     hostilities_tick)
                     yield from loop.run_in_executor(None, data_caching.finished_processing_battle, room_name,
-                                                    hostilities_tick)
+                                                    hostilities_tick, None)
                     # Don't sleep quite as long, but we still don't want to be constantly checking if the only battles
                     # in our queue are old battles.
                     # It is still OK to sleep this short though, since each individual room's "unavailable" status is

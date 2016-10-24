@@ -55,9 +55,12 @@ def get_battle_data(room_name, center_tick):
         return None
 
     first_hostilities_tick = None
+    last_hostilities_tick = None
 
     creeps_found = set()
     player_to_bodycounts = defaultdict(Counter)
+    room_owner = None
+    room_level = None
     for tick_to_call in range(start_tick, end_tick, 20):
         result = requests.get(HISTORY_URL_FORMAT.format(room=room_name, tick=tick_to_call))
         if result.status_code == 404:
@@ -86,14 +89,20 @@ def get_battle_data(room_name, center_tick):
                     if owner.isdigit() and int(owner) < 10:
                         continue
                     counter = player_to_bodycounts[owner]
-                    for part in obj_data['body']:
-                        counter[part['type']] += 1
-                if first_hostilities_tick is None or tick < first_hostilities_tick:
+                    counter[identify_creep(obj_data)] += 1
+                if room_owner is None and obj_data.get('type') == 'controller':
+                    room_owner = obj_data.get('user')
+                    room_level = obj_data.get('level')
+                if first_hostilities_tick is None or last_hostilities_tick is None or tick < first_hostilities_tick \
+                        or tick > last_hostilities_tick:
                     action_log = obj_data.get('action_log')
                     if action_log and (action_log.get('attack') or action_log.get('rangedAttack')
                                        or action_log.get('rangedMassAttack')
                                        or action_log.get('heal') or action_log.get('rangedHeal')):
-                        first_hostilities_tick = tick
+                        if first_hostilities_tick is None or tick < first_hostilities_tick:
+                            first_hostilities_tick = tick
+                        if last_hostilities_tick is None or tick > last_hostilities_tick:
+                            first_hostilities_tick = tick
 
     try:
         player_counts = {username_from_id(user_id): data for user_id, data in player_to_bodycounts.items()}
@@ -101,10 +110,55 @@ def get_battle_data(room_name, center_tick):
         logger.warning("Couldn't find username(s)! Error: {}, player_counts: {}".format(e, player_to_bodycounts))
         data_caching.set_battle_data_not_yet_avail(room_name, start_tick)
         return None
+    if first_hostilities_tick is None:
+        logger.debug("Couldn't find first hostilities tick with center_tick={} in {}".format(center_tick, room_name))
+    else:
+        logger.debug("Found first hostilities tick {} (center_tick {}, room_name {})".format(
+            first_hostilities_tick, center_tick, room_name))
+    if first_hostilities_tick is None:
+        logger.debug("Couldn't find last hostilities tick with center_tick={} in {}".format(center_tick, room_name))
+    else:
+        logger.debug("Found last hostilities tick {} (range {}, center_tick {}, room_name {})".format(
+            last_hostilities_tick, last_hostilities_tick - first_hostilities_tick, center_tick, room_name))
     battle_data = {
         "room": room_name,
         "hostilities_tick": first_hostilities_tick or center_tick,
         "player_counts": player_counts,
     }
+    if room_owner:
+        battle_data['owner'] = username_from_id(room_owner)
+    if room_level:
+        battle_data['rcl'] = room_level
     data_caching.set_battle_data(room_name, start_tick, battle_data)
     return battle_data
+
+
+def identify_creep(creep_obj):
+    body = creep_obj['body']
+
+    def has(type):
+        return any(x.get('type') == type for x in body)
+
+    def count(type):
+        return sum(x.get('type') == type for x in body)
+
+    ranged = has('ranged_attack')
+    heal = has('heal')
+    attack = has('attack')
+    work = has('work')
+    carry = has('carry')
+    if ranged and not attack:
+        return 'ranged attacker'
+    elif attack and not ranged:
+        return 'melee attacker'
+    elif heal and not ranged and not attack:
+        return 'healer'
+    elif work and not carry and count('work') > 8:
+        return 'dismantler'
+    elif (ranged or heal or attack) and not carry:
+        return 'general attacker'
+    elif (work or carry) and not heal and not ranged and not attack:
+        return 'civilian'
+    else:
+        logger.debug("Couldn't describe creep body: {}".format(body))
+        return ''.join(x['type'][0].upper() for x in body)

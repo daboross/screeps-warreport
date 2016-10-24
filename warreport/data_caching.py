@@ -86,7 +86,8 @@ def finished_processing_battle(room_name, start_tick, battle_info_dict):
     pipe = cache_connection.pipeline()
     if current and current.decode() == '{}:{}'.format(room_name, start_tick):
         pipe.delete(CURRENTLY_PROCESSING_KEY)
-    pipe.rpush(QUEUED_BATTLES_REPORTING_KEY, json.dumps(battle_info_dict))
+    if battle_info_dict is not None:
+        pipe.rpush(QUEUED_BATTLES_REPORTING_KEY, json.dumps(battle_info_dict))
     pipe.execute()
 
 

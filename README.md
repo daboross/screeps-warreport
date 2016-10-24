@@ -19,3 +19,9 @@ stored in process memory and race conditions are avoided as much as possible, ki
 to no affect on the service.
 
 To add custom configurations, copy `config.default.json` to `config.json` and edit.
+
+Example output pictures:
+
+v0.0.1:
+
+![v0.0.1 output picture](docs/warreport-v0.0.1.png)
