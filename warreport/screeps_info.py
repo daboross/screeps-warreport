@@ -2,6 +2,7 @@ import logging
 
 import requests
 from collections import Counter
+from collections import defaultdict
 
 from . import data_caching
 
@@ -47,17 +48,20 @@ def get_battledata(room_name, center_tick):
         # end_tick is 181-220 after
     end_tick = start_tick + 240
 
-    cached_player_counts = data_caching.get_player_counts(room_name, start_tick)
-    if cached_player_counts is not None:
-        return {"player_counts": cached_player_counts}
+    cached_battle_data = data_caching.get_battle_data(room_name, start_tick)
+    if cached_battle_data is not None:
+        return cached_battle_data
     if data_caching.get_battledata_not_yet_avail(room_name, start_tick):
         return None
 
+    first_hostilities_tick = None
+
     creeps_found = set()
-    player_to_bodycounts = Counter()
+    player_to_bodycounts = defaultdict(Counter)
     for tick_to_call in range(start_tick, end_tick, 20):
         result = requests.get(HISTORY_URL_FORMAT.format(room=room_name, tick=tick_to_call))
         if result.status_code == 404:
+            logger.debug("Checked data for room {} tick {}: not generated yet (404).".format(room_name, tick_to_call))
             data_caching.set_battledata_not_yet_avail(room_name, start_tick)
             return None
         elif result.status_code != 200:
@@ -66,7 +70,7 @@ def get_battledata(room_name, center_tick):
             data_caching.set_battledata_not_yet_avail(room_name, start_tick)
             return None
         json_root = result.json()
-        for tick_data in json_root['ticks'].values():
+        for tick, tick_data in json_root['ticks'].items():
             for creep_id, obj_data in tick_data.items():
                 # type is only set for new creeps, but we don't really care about updates to old creeps yet because
                 # we're just counting raw bodyparts.
@@ -79,12 +83,25 @@ def get_battledata(room_name, center_tick):
                     # or invaders. I'm assuming there's a '1' too, since '2' exists... Anyways, can't hurt to add an
                     # exception here, since neither one is a valid regular user ID.
                     if owner != '2' and owner != '1':
-                        player_to_bodycounts[owner] += len(obj_data['body'])  # super boring atm
+                        counter = player_to_bodycounts[owner]
+                        for part in obj_data['body']:
+                            counter[part['type']] += 1
+                action_log = obj_data.get('action_log')
+                if action_log and (action_log.get('attack') or action_log.get('rangedAttack') or action_log.get('heal')
+                                   or action_log.get('rangedMassAttack')):
+                    if first_hostilities_tick is None or tick < first_hostilities_tick:
+                        first_hostilities_tick = tick
+
     try:
-        player_counts = {username_from_id(user_id): count for user_id, count in player_to_bodycounts.items()}
+        player_counts = {username_from_id(user_id): data for user_id, data in player_to_bodycounts.items()}
     except ScreepsError as e:
         logger.warning("Couldn't find username(s)! Error: {}, player_counts: {}".format(e, player_to_bodycounts))
         data_caching.set_battledata_not_yet_avail(room_name, start_tick)
         return None
-    data_caching.set_player_counts(room_name, start_tick, player_counts)
-    return {"player_counts": player_counts}
+    battle_data = {
+        "room": room_name,
+        "hostilities_tick": first_hostilities_tick or center_tick,
+        "player_counts": player_counts,
+    }
+    data_caching.set_battle_data(room_name, start_tick, battle_data)
+    return battle_data

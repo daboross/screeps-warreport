@@ -8,6 +8,7 @@ logger = logging.getLogger("warreport")
 
 def main():
     logger.info("Starting main loop.")
+    logger.debug("Debug logging enabled.")
     loop = asyncio.get_event_loop()
     loop.run_until_complete(asyncio.gather(
         battle_monitor.grab_new_battles(loop),

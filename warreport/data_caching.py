@@ -1,15 +1,16 @@
+import json
 from warreport import redis_conn as cache_connection
 
-__all__ = ["get_username", "set_username", "get_player_counts", "set_player_counts", "get_battledata_not_yet_avail",
+__all__ = ["get_username", "set_username", "get_battle_data", "set_battle_data", "get_battledata_not_yet_avail",
            "set_battledata_not_yet_avail"]
 
 USERNAME_KEY = "screeps:warreport:username:{}"
 USERNAME_EXPIRE = 60 * 60 * 5
 
-PLAYER_COUNTS_KEY = "screeps:warreport:battledata:{}:{}"
-PLAYER_COUNTS_EXPIRE = 60 * 60 * 24 * 3
+BATTLE_DATA_KEY = "screeps:warreport:battle-data:{}:{}"
+BATTLE_DATA_EXPIRE = 60 * 60 * 24 * 3
 
-NO_BATTLE_DATA_KEY = "screeps:warreport:battledata-not-avail:{}:{}"
+NO_BATTLE_DATA_KEY = "screeps:warreport:battle-data-not-avail:{}:{}"
 NO_BATTLE_DATA_EXPIRE = 60
 
 QUEUED_BATTLES_KEY = "screeps:warreport:unreported_battles"
@@ -30,22 +31,19 @@ def set_username(user_id, username):
     cache_connection.set(key, username, ex=USERNAME_EXPIRE)
 
 
-def get_player_counts(room_name, start_tick):
-    key = PLAYER_COUNTS_KEY.format(room_name, start_tick)
+def get_battle_data(room_name, start_tick):
+    key = BATTLE_DATA_KEY.format(room_name, start_tick)
     # hgetall will return an empty dict for a hash which doesn't exist - we bypass this by adding a '_checked' field.
-    raw = cache_connection.hgetall(key)
-    if len(raw):
-        return {k.decode(): v.decode() for k, v in raw.items() if k != '__$checked'}
+    raw = cache_connection.get(key)
+    if raw:
+        return json.loads(raw.decode())
+    else:
+        return None
 
 
-def set_player_counts(room_name, start_tick, data_dict):
-    if not len(data_dict):
-        data_dict = {'__$checked': 1}  # redis doesn't allow empty hashes.
-    key = PLAYER_COUNTS_KEY.format(room_name, start_tick)
-    pipe = cache_connection.pipeline()
-    pipe.hmset(key, data_dict)
-    pipe.expire(key, PLAYER_COUNTS_EXPIRE)
-    pipe.execute()
+def set_battle_data(room_name, start_tick, data_dict):
+    key = BATTLE_DATA_KEY.format(room_name, start_tick)
+    cache_connection.set(key, json.dumps(data_dict))
 
 
 def get_battledata_not_yet_avail(room_name, start_tick):
