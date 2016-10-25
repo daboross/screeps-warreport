@@ -5,7 +5,7 @@ from collections import Counter
 from collections import defaultdict
 
 from warreport.constants import scout, civilian, general_attacker, dismantling_attacker, healer, melee_attacker, \
-    ranged_attacker
+    ranged_attacker, tough_attacker, work_and_carry_attacker
 from . import data_caching
 
 _URL_ROOT = "https://screeps.com/"
@@ -198,8 +198,12 @@ def identify_creep(creep_obj):
         return dismantling_attacker
     elif (ranged or heal or attack) and not carry:
         return general_attacker
+    elif all(x.get('type') == 'move' or x.get('type') == 'tough' for x in body):
+        return tough_attacker
     elif (work or carry or claim) and not heal and not ranged and not attack:
         return civilian
+    elif (work or carry or claim) and (heal or ranged or attack):
+        return work_and_carry_attacker
     elif all(x.get('type') == 'move' for x in body):
         return scout
     else:

@@ -3,5 +3,7 @@ melee_attacker = "melee attacker"
 healer = 'healer'
 dismantling_attacker = 'dismantler'
 general_attacker = 'general attacker'
+tough_attacker = 'tough guy'
+work_and_carry_attacker = 'multi-purpose attacker'
 civilian = 'civilian'
 scout = 'scout'
