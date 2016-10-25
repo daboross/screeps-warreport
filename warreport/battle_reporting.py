@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 import requests
+from functools import partial
 
 from warreport import data_caching, SLACK_URL
 from warreport.constants import civilian, scout
@@ -26,7 +27,7 @@ def report_battles(loop):
                 payload = {
                     "text": text,
                 }
-                slack_response = yield from loop.run_in_executor(None, lambda: requests.post(SLACK_URL, json=payload))
+                slack_response = yield from loop.run_in_executor(None, partial(requests.post, SLACK_URL, json=payload))
                 assert isinstance(slack_response, requests.Response)
                 if slack_response.status_code != 200:
                     logger.error("Couldn't post to slack! {} ({}, for payload {})"

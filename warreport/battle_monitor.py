@@ -1,6 +1,8 @@
 import asyncio
 import logging
 
+from functools import partial
+
 from warreport import redis_conn as redis, screeps_api, data_caching, screeps_info
 
 _LAST_CHECKED_TICK_KEY = "screeps:warreport:last-checked-tick"
@@ -18,17 +20,18 @@ def grab_new_battles(loop):
     last_grabbed_tick = yield from loop.run_in_executor(None, redis.get, _LAST_CHECKED_TICK_KEY)
     while True:
         if last_grabbed_tick is not None:
-            battles = yield from loop.run_in_executor(None, lambda: screeps_api.battles(sinceTick=last_grabbed_tick))
+            battles = yield from loop.run_in_executor(None, partial(screeps_api.battles, sinceTick=last_grabbed_tick))
         else:
-            battles = yield from loop.run_in_executor(None, lambda: screeps_api.battles(interval=2000))
+            battles = yield from loop.run_in_executor(None, partial(screeps_api.battles, interval=2000))
         if battles and battles.get('ok'):
             last_grabbed_tick = battles.get('time')
             if len(battles['rooms']):
                 yield from asyncio.gather(
-                    loop.run_in_executor(None, lambda: redis.set(_LAST_CHECKED_TICK_KEY, last_grabbed_tick,
-                                                                 ex=_LAST_CHECKED_EXPIRE_SECONDS)),
-                    loop.run_in_executor(None, lambda: data_caching.add_battles_to_processing_queue((
-                        (obj['_id'], obj['lastPvpTime']) for obj in battles['rooms']))),
+                    loop.run_in_executor(None, partial(redis.set, _LAST_CHECKED_TICK_KEY, last_grabbed_tick,
+                                                       ex=_LAST_CHECKED_EXPIRE_SECONDS)),
+                    loop.run_in_executor(None, partial(data_caching.add_battles_to_processing_queue,
+                                                       ((obj['_id'], obj['lastPvpTime'])
+                                                        for obj in battles['rooms']))),
                     loop=loop
                 )
         yield from asyncio.sleep(5 * 60, loop=loop)
@@ -44,7 +47,7 @@ def process_battles(loop):
         battle_info = None
         while battle_info is None:
             battle_info = yield from loop.run_in_executor(
-                None, lambda: screeps_info.get_battle_data(room_name, hostilities_tick))
+                None, partial(screeps_info.get_battle_data, room_name, hostilities_tick))
             if battle_info is None:
                 latest_tick = yield from loop.run_in_executor(None, redis.get, _LAST_CHECKED_TICK_KEY)
                 if latest_tick is not None and int(latest_tick) - int(hostilities_tick) \
