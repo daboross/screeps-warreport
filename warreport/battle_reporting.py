@@ -4,7 +4,7 @@ import logging
 import requests
 from functools import partial
 
-from warreport import data_caching, SLACK_URL, sighandler
+from warreport import data_caching, SLACK_URL
 from warreport.constants import civilian, scout
 
 logger = logging.getLogger("warreport")
@@ -16,10 +16,7 @@ def report_battles(loop):
     :type loop: asyncio.events.AbstractEventLoop
     """
     while True:
-        battle_info = yield from sighandler.wait_for_this_or_exited(
-            loop.run_in_executor(None, data_caching.get_next_reportable_battle_info))
-        if sighandler.has_exited():
-            return
+        battle_info = yield from loop.run_in_executor(None, data_caching.get_next_reportable_battle_info)
         assert isinstance(battle_info, dict)
         if should_report(battle_info):
             # TODO: get first hostility tick as part of battle data!

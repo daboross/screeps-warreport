@@ -3,7 +3,7 @@ import logging
 
 from functools import partial
 
-from warreport import redis_conn as redis, screeps_api, data_caching, screeps_info, sighandler
+from warreport import redis_conn as redis, screeps_api, data_caching, screeps_info
 
 _LAST_CHECKED_TICK_KEY = "screeps:warreport:last-checked-tick"
 _LAST_CHECKED_EXPIRE_SECONDS = 30 * 60
@@ -19,8 +19,6 @@ def grab_new_battles(loop):
     """
     last_grabbed_tick = yield from loop.run_in_executor(None, redis.get, _LAST_CHECKED_TICK_KEY)
     while True:
-        if sighandler.has_exited():
-            return
         if last_grabbed_tick is not None:
             battles = yield from loop.run_in_executor(None, partial(screeps_api.battles, sinceTick=last_grabbed_tick))
         else:
@@ -36,7 +34,7 @@ def grab_new_battles(loop):
                                                         for obj in battles['rooms']))),
                     loop=loop
                 )
-        yield from sighandler.sleep(60)
+        yield from asyncio.sleep(5 * 60, loop=loop)
 
 
 @asyncio.coroutine
@@ -48,10 +46,8 @@ def process_battles(loop):
         room_name, hostilities_tick = yield from loop.run_in_executor(None, data_caching.get_next_battle_to_process)
         battle_info = None
         while battle_info is None:
-            battle_info = yield from sighandler.wait_for_this_or_exited(loop.run_in_executor(
-                None, partial(screeps_info.get_battle_data, room_name, hostilities_tick)))
-            if sighandler.has_exited():
-                return
+            battle_info = yield from loop.run_in_executor(
+                None, partial(screeps_info.get_battle_data, room_name, hostilities_tick))
             if battle_info is None:
                 latest_tick = yield from loop.run_in_executor(None, redis.get, _LAST_CHECKED_TICK_KEY)
                 if latest_tick is not None and int(latest_tick) - int(hostilities_tick) \
@@ -66,12 +62,10 @@ def process_battles(loop):
                     # in our queue are old battles.
                     # It is still OK to sleep this short though, since each individual room's "unavailable" status is
                     # cached for one minute.
-                    yield from sighandler.sleep(5)
+                    yield from asyncio.sleep(5, loop=loop)
                     break
                 # Cache expires in 60 seconds.
-                exited = yield from sighandler.sleep(90)
-                if exited:
-                    break
+                yield from asyncio.sleep(90, loop=loop)
 
         if battle_info is None:
             continue  # We've chosen to skip this one
