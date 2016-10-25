@@ -4,6 +4,8 @@ import requests
 from collections import Counter
 from collections import defaultdict
 
+from warreport.constants import scout, civilian, general_attacker, dismantling_attacker, healer, melee_attacker, \
+    ranged_attacker
 from . import data_caching
 
 USERNAME_URL_FORMAT = "https://screeps.com/api/user/find?id={user_id}"
@@ -148,17 +150,19 @@ def identify_creep(creep_obj):
     work = has('work')
     carry = has('carry')
     if ranged and not attack:
-        return 'ranged attacker'
+        return ranged_attacker
     elif attack and not ranged:
-        return 'melee attacker'
+        return melee_attacker
     elif heal and not ranged and not attack:
-        return 'healer'
+        return healer
     elif work and not carry and count('work') > 8:
-        return 'dismantler'
+        return dismantling_attacker
     elif (ranged or heal or attack) and not carry:
-        return 'general attacker'
+        return general_attacker
     elif (work or carry) and not heal and not ranged and not attack:
-        return 'civilian'
+        return civilian
+    elif all(x.get('type') == 'move' for x in body):
+        return scout
     else:
         logger.debug("Couldn't describe creep body: {}".format(body))
         return ''.join(x['type'][0].upper() for x in body)

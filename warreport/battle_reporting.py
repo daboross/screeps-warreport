@@ -4,6 +4,7 @@ import logging
 import requests
 
 from warreport import data_caching, SLACK_URL
+from warreport.constants import civilian, scout
 
 logger = logging.getLogger("warreport")
 
@@ -40,7 +41,14 @@ def report_battles(loop):
 
 
 def should_report(battle_info):
-    return len(battle_info['player_counts']) >= 2
+    # Don't report a single player dismantling their own things
+    if len(battle_info['player_counts']) < 2:
+        return False
+    # Don't report a single civilian or scout walking into someone's owned room and being shot down
+    if not any((role != civilian and role != scout for role in creeps.keys())
+               for player, creeps in battle_info['player_counts'].items() if battle_info.get('owner') != player):
+        return False
+    return True
 
 
 def format_message(battle_info):
@@ -62,9 +70,9 @@ def describe_room(battle_info):
 
 
 def describe_battle(battle_info):
-    items_list = sorted(battle_info['player_counts'].items(), key=lambda t: -sum(t[1].values()))
+    items_list = sorted(battle_info['player_counts'].items(), key=lambda t: t[0])
     return " vs. ".join("{} ({})".format(
         name,
         ", ".join("{} {}{}".format(count, type, 's' if count > 1 else '')
-                for type, count in sorted(parts.items(), key=lambda t: t[0])),
+                  for type, count in sorted(parts.items(), key=lambda t: t[0])),
     ) for name, parts in items_list)
