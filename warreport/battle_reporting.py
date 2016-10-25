@@ -58,27 +58,54 @@ def should_report(battle_info):
 def format_message(battle_info):
     room_name = battle_info['room']
 
-    return "Battle in <https://screeps.com/a/#!/history/{}?t={}|{}>{}: {}".format(
+    return "<https://screeps.com/a/#!/history/{}?t={}|{}{}>: {} tick battle{}: {}".format(
         room_name, int(battle_info['hostilities_tick']) - 5, room_name,
-        describe_room(battle_info), describe_battle(battle_info))
+        describe_rcl(battle_info), describe_duration(battle_info),
+        describe_defender(battle_info), describe_battle(battle_info))
 
 
-def describe_room(battle_info):
-    if 'owner' in battle_info:
-        if 'rcl' in battle_info:
-            return ' ({}, {})'.format(battle_info['owner'], battle_info['rcl'])
-        else:
-            return ' ({})'.format(battle_info['owner'])
+def describe_rcl(battle_info):
+    if 'rcl' in battle_info:
+        return " (RCL {})".format(battle_info['rcl'])
     else:
-        return ''
+        return ""
+
+
+def describe_duration(battle_info):
+    if 'duration' in battle_info:
+        return "{0:03d}".format(battle_info['duration'])
+    else:
+        return "???"
+
+
+def describe_defender(battle_info):
+    if 'owner' in battle_info:
+        return ", {} defending".format(battle_info['owner'])
+    else:
+        return ""
 
 
 def describe_battle(battle_info):
     # Sort by a tuple of (not the owner, username) so that the owner of a room always comes first.
     items_list = sorted(battle_info['player_counts'].items(),
                         key=lambda t: (t[0] != battle_info.get('owner'), t[0]))
-    return " vs. ".join("{} ({})".format(
-        name,
-        ", ".join("{} {}{}".format(count, type, 's' if count > 1 else '')
-                  for type, count in sorted(parts.items(), key=lambda t: t[0])),
-    ) for name, parts in items_list)
+    return " vs. ".join("{}'s {}".format(name, describe_player_creep_list(parts)) for name, parts in items_list)
+
+
+def describe_player_creep_list(creeps):
+    creeps = sorted(creeps.items(), key=lambda t: t[0])
+    if len(creeps) >= 2:
+        last_role, last_count = creeps[-1]
+        return "{} and {}".format(
+            ", ".join(describe_creep(role, count) for role, count in creeps[:-1]),
+            describe_creep(last_role, last_count)
+        )
+    else:
+        return ", ".join(describe_creep(role, count) for role, count in creeps)
+
+
+def describe_creep(role, count):
+    if count > 1:
+        return "{} {}s".format(count, role)
+    else:
+        return "{} {}".format(count, role)
