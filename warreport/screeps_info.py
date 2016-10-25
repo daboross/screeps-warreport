@@ -118,6 +118,7 @@ def get_battle_data(room_name, center_tick):
                 if room_owner is None and obj_data.get('type') == 'controller':
                     room_owner = obj_data.get('user')
                     room_level = obj_data.get('level')
+                tick = int(tick)
                 if first_hostilities_tick is None or last_hostilities_tick is None or tick < first_hostilities_tick \
                         or tick > last_hostilities_tick:
                     action_log = obj_data.get('actionLog')
@@ -128,7 +129,7 @@ def get_battle_data(room_name, center_tick):
                         if first_hostilities_tick is None or tick < first_hostilities_tick:
                             first_hostilities_tick = tick
                         if last_hostilities_tick is None or tick > last_hostilities_tick:
-                            first_hostilities_tick = tick
+                            last_hostilities_tick = tick
 
     try:
         player_counts = {username_from_id(user_id): data for user_id, data in player_to_bodycounts.items()}
@@ -138,15 +139,16 @@ def get_battle_data(room_name, center_tick):
         return None
     if first_hostilities_tick is None:
         logger.debug("Couldn't find first hostilities tick with center_tick={} in {}".format(center_tick, room_name))
-        logger.debug("URLs to check: {}".format([HISTORY_URL_FORMAT.format(room=room_name, tick=tick)
-                                                 for tick in range(start_tick, end_tick, 20)]))
     else:
         logger.debug("Found first hostilities tick {} (center_tick {}, room_name {})!".format(
             first_hostilities_tick, center_tick, room_name))
-    if first_hostilities_tick is None:
+    if last_hostilities_tick is None:
         logger.debug("Couldn't find last hostilities tick with center_tick={} in {}".format(center_tick, room_name))
+    elif first_hostilities_tick is None:
+        logger.debug("Found last hostilities tick {}, but not first hostilities tick? (center_tick {}, room_name {})"
+                     .format(last_hostilities_tick, center_tick, room_name))
     else:
-        logger.debug("Found last hostilities tick {} (range {}, center_tick {}, room_name {})".format(
+        logger.debug("Found last hostilities tick {} with total battle time {} (center_tick {}, room_name {})".format(
             last_hostilities_tick, last_hostilities_tick - first_hostilities_tick, center_tick, room_name))
     battle_data = {
         "room": room_name,
@@ -157,6 +159,8 @@ def get_battle_data(room_name, center_tick):
         battle_data['owner'] = username_from_id(room_owner)
     if room_level:
         battle_data['rcl'] = room_level
+    if first_hostilities_tick and last_hostilities_tick:
+        battle_data['duration'] = last_hostilities_tick - first_hostilities_tick
     data_caching.set_battle_data(room_name, start_tick, battle_data)
     return battle_data
 
