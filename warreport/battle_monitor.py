@@ -56,10 +56,12 @@ def process_battles(loop):
 
         if battle_info is None:
             # If we continue without sending queuing a finished battle, the battle will simply be sent to the back of
-            # the processing queue. This way, we'll keep checking to see if we have any history parts available every 90
+            # the processing queue. This way, we'll keep checking to see if we have any history parts available every 30
             # seconds, and if we have multiple battles which aren't in order, we'll still get to all of them in good
             # time.
-            yield from asyncio.sleep(90, loop=loop)
+            yield from asyncio.sleep(30, loop=loop)
             continue
+
+        logger.debug("Processed {}:{}: submitting to reporting queue!".format(room_name, hostilities_tick))
 
         yield from loop.run_in_executor(None, queuing.submit_processed_battle, database_key, battle_info)

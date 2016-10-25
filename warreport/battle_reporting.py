@@ -36,10 +36,11 @@ def report_battles(loop):
                     # once we've reported everything else.
                     yield from asyncio.sleep(60, loop=loop)
                     continue  # < don't mark as finished
+            logger.debug("Reported battle {}:{}!".format(battle_info['room'], battle_info['hostilities_tick']))
         else:
-            logger.debug("Skipping battle in {} at {} ({}).".format(battle_info['room'],
-                                                                    battle_info['hostilities_tick'],
-                                                                    describe_battle(battle_info)))
+            logger.debug("Skipping battle {}:{} ({}).".format(battle_info['room'],
+                                                              battle_info['hostilities_tick'],
+                                                              describe_battle(battle_info)))
         yield from loop.run_in_executor(None, queuing.mark_battle_reported, database_key)
 
 

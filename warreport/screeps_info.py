@@ -195,5 +195,6 @@ def identify_creep(creep_obj):
     elif all(x.get('type') == 'move' for x in body):
         return scout
     else:
-        logger.debug("Couldn't describe creep body: {}".format(body))
+        # We're just saying this as info for now since we care about adding new bodytypes to the code.
+        logger.info("Couldn't describe creep body: {}".format(body))
         return ''.join(x['type'][0].upper() for x in body)
