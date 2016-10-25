@@ -25,7 +25,7 @@ class ScreepsError(Exception):
         return self.message
 
 
-def grab_battles_uncached(since_tick=None, interval=None):
+def grab_battles(since_tick=None, interval=None):
     if since_tick is not None:
         params = {'sinceTick': since_tick}
     elif interval is not None:
@@ -73,9 +73,6 @@ def get_battle_data(room_name, center_tick, allow_unfinished_results=False):
         # end_tick is 181-220 after
     end_tick = start_tick + 240
 
-    cached_battle_data = data_caching.get_battle_data(room_name, start_tick)
-    if cached_battle_data is not None:
-        return cached_battle_data
     if data_caching.get_battle_data_not_yet_avail(room_name, start_tick):
         return None
 
@@ -169,7 +166,6 @@ def get_battle_data(room_name, center_tick, allow_unfinished_results=False):
         battle_data['rcl'] = room_level
     if first_hostilities_tick and last_hostilities_tick:
         battle_data['duration'] = last_hostilities_tick - first_hostilities_tick
-    data_caching.set_battle_data(room_name, start_tick, battle_data)
     return battle_data
 
 

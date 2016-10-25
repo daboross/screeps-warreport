@@ -23,10 +23,10 @@ def grab_new_battles(loop):
         logger.debug("Grabbing battles.")
         try:
             if last_grabbed_tick is not None:
-                battles = yield from loop.run_in_executor(None, partial(screeps_info.grab_battles_uncached,
+                battles = yield from loop.run_in_executor(None, partial(screeps_info.grab_battles,
                                                                         since_tick=last_grabbed_tick))
             else:
-                battles = yield from loop.run_in_executor(None, partial(screeps_info.grab_battles_uncached,
+                battles = yield from loop.run_in_executor(None, partial(screeps_info.grab_battles,
                                                                         interval=2000))
         except ScreepsError as e:
             logging.warning("Error accessing battles API: {}".format(e))
