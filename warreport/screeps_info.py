@@ -49,7 +49,7 @@ def username_from_id(user_id):
     cached = data_caching.get_username(user_id)
     if cached is not None:
         return cached
-    call_result = requests.get(USERNAME_URL_FORMAT, params={'user_id': user_id})
+    call_result = requests.get(USERNAME_URL_FORMAT, params={'id': user_id})
     if call_result.ok:
         name = call_result.json().get('user', {}).get('username', None)
         if name is None:
