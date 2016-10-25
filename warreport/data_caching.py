@@ -1,24 +1,18 @@
 import json
 
-from warreport import redis_conn as cache_connection
+from warreport import redis_conn as cache_connection, DATABASE_PREFIX
 
 __all__ = ["get_username", "set_username", "get_battle_data", "set_battle_data", "get_battle_data_not_yet_avail",
            "set_battle_data_not_yet_avail"]
 
-USERNAME_KEY = "screeps:warreport:username:{}"
+USERNAME_KEY = DATABASE_PREFIX + "cache:username:{}"
 USERNAME_EXPIRE = 60 * 60 * 5
 
-BATTLE_DATA_KEY = "screeps:warreport:battle-data:{}:{}"
+BATTLE_DATA_KEY = DATABASE_PREFIX + "cache:battle-data:{}:{}"
 BATTLE_DATA_EXPIRE = 60 * 60 * 24 * 3
 
-NO_BATTLE_DATA_KEY = "screeps:warreport:battle-data-not-avail:{}:{}"
+NO_BATTLE_DATA_KEY = DATABASE_PREFIX + "cache:battle-data-not-avail:{}:{}"
 NO_BATTLE_DATA_EXPIRE = 60
-
-QUEUED_BATTLES_KEY = "screeps:warreport:unreported_battles"
-CURRENTLY_PROCESSING_KEY = "screeps:warreport:current_battle"
-
-QUEUED_BATTLES_REPORTING_KEY = 'screeps:warreport:processed_unreported'
-CURRENTLY_REPORTING_KEY = "screeps:warreport:currently_reporting"
 
 
 def get_username(user_id):
@@ -58,54 +52,3 @@ def get_battle_data_not_yet_avail(room_name, start_tick):
 def set_battle_data_not_yet_avail(room_name, start_tick):
     key = NO_BATTLE_DATA_KEY.format(room_name, start_tick)
     cache_connection.set(key, 1, ex=NO_BATTLE_DATA_EXPIRE)
-
-
-def add_battle_to_processing_queue(room_name, start_tick):
-    cache_connection.rpush(QUEUED_BATTLES_KEY, "{}:{}".format(room_name, start_tick))
-
-
-def add_battles_to_processing_queue(battles_array):
-    cache_connection.rpush(QUEUED_BATTLES_KEY, *("{}:{}".format(room_name, start_tick)
-                                                 for room_name, start_tick in battles_array))
-
-
-def get_next_battle_to_process():
-    # TODO: this really does assume that we're only doing one at a time, and may produce duplicate messages if we have
-    # multiple instances running!
-    current = cache_connection.get(CURRENTLY_PROCESSING_KEY)
-    if current:
-        return current.decode().split(':')
-    # blpop returns a (key, popped_value) tuple
-    battle = cache_connection.blpop(QUEUED_BATTLES_KEY)[1]
-    cache_connection.set(CURRENTLY_PROCESSING_KEY, battle)
-    return battle.decode().split(':')
-
-
-def finished_processing_battle(room_name, start_tick, battle_info_dict):
-    current = cache_connection.get(CURRENTLY_PROCESSING_KEY)
-    pipe = cache_connection.pipeline()
-    if current and current.decode() == '{}:{}'.format(room_name, start_tick):
-        pipe.delete(CURRENTLY_PROCESSING_KEY)
-    if battle_info_dict is not None:
-        pipe.rpush(QUEUED_BATTLES_REPORTING_KEY, json.dumps(battle_info_dict))
-    pipe.execute()
-
-
-def get_next_reportable_battle_info():
-    current = cache_connection.get(CURRENTLY_REPORTING_KEY)
-    if current:
-        return json.loads(current.decode())
-
-    battle = cache_connection.blpop(QUEUED_BATTLES_REPORTING_KEY)[1]
-    cache_connection.set(CURRENTLY_REPORTING_KEY, battle)
-    return json.loads(battle.decode())
-
-
-def finished_reporting_battle(battle_info):
-    current = cache_connection.get(CURRENTLY_REPORTING_KEY)
-    if current:
-        # TODO: is this the best way to do this?
-        current_data = json.loads(current.decode())
-        if current_data.get('room') == battle_info.get('room') \
-                and current_data.get('hostilities_tick') == battle_info.get('hostilities_tick'):
-            cache_connection.delete(CURRENTLY_REPORTING_KEY)

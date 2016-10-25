@@ -6,6 +6,7 @@ import redis
 
 SLACK_URL = None
 redis_conn = None
+DATABASE_PREFIX = None
 
 
 def _setup_logging(logging_config):
@@ -64,12 +65,14 @@ def _setup_logging(logging_config):
 
 
 def _set_database(database_config):
-    global redis_conn
+    global redis_conn, DATABASE_PREFIX
     host = database_config.get('host', 'localhost')
     port = database_config.get('port', 6379)
     database = database_config.get('database', 0)
+    prefix = database_config.get('prefix', 'screeps:warreport:')
 
     redis_conn = redis.StrictRedis(host=host, port=port, db=database)
+    DATABASE_PREFIX = prefix
     logging.getLogger("warreport").info("Database connected successfully.")
 
 
@@ -108,4 +111,4 @@ def _setup():
 
 _setup()
 
-from . import data_caching, screeps_info, battle_monitor, battle_reporting
+from . import constants, data_caching, queuing, screeps_info, battle_monitor, battle_reporting

@@ -4,7 +4,7 @@ import logging
 import requests
 from functools import partial
 
-from warreport import data_caching, SLACK_URL
+from warreport import SLACK_URL, queuing
 from warreport.constants import civilian, scout
 
 logger = logging.getLogger("warreport")
@@ -16,10 +16,9 @@ def report_battles(loop):
     :type loop: asyncio.events.AbstractEventLoop
     """
     while True:
-        battle_info = yield from loop.run_in_executor(None, data_caching.get_next_reportable_battle_info)
+        battle_info, database_key = yield from loop.run_in_executor(None, queuing.get_next_battle_to_report)
         assert isinstance(battle_info, dict)
         if should_report(battle_info):
-            # TODO: get first hostility tick as part of battle data!
             text = format_message(battle_info)
             if SLACK_URL is None:
                 logger.info(text)
@@ -32,13 +31,16 @@ def report_battles(loop):
                 if slack_response.status_code != 200:
                     logger.error("Couldn't post to slack! {} ({}, for payload {})"
                                  .format(slack_response.text, slack_response.status_code, payload))
-                    yield from asyncio.sleep(60, loop=loop)  # Try again in 30 seconds.
+                    # When we can't post, let's just go and try the next battle. If we don't tell queuing that we've
+                    # finished the battle, it will just go to the end of the queue, and we'll try to report it again
+                    # once we've reported everything else.
+                    yield from asyncio.sleep(60, loop=loop)
                     continue  # < don't mark as finished
         else:
             logger.debug("Skipping battle in {} at {} ({}).".format(battle_info['room'],
                                                                     battle_info['hostilities_tick'],
                                                                     describe_battle(battle_info)))
-        yield from loop.run_in_executor(None, data_caching.finished_reporting_battle, battle_info)
+        yield from loop.run_in_executor(None, queuing.mark_battle_reported, database_key)
 
 
 def should_report(battle_info):
