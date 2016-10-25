@@ -120,7 +120,7 @@ def get_battle_data(room_name, center_tick):
                     room_level = obj_data.get('level')
                 if first_hostilities_tick is None or last_hostilities_tick is None or tick < first_hostilities_tick \
                         or tick > last_hostilities_tick:
-                    action_log = obj_data.get('action_log')
+                    action_log = obj_data.get('actionLog')
                     if action_log and (action_log.get('attack') or action_log.get('rangedAttack')
                                        or action_log.get('rangedMassAttack')
                                        or action_log.get('heal') or action_log.get('rangedHeal')
@@ -138,8 +138,10 @@ def get_battle_data(room_name, center_tick):
         return None
     if first_hostilities_tick is None:
         logger.debug("Couldn't find first hostilities tick with center_tick={} in {}".format(center_tick, room_name))
+        logger.debug("URLs to check: {}".format([HISTORY_URL_FORMAT.format(room=room_name, tick=tick)
+                                                 for tick in range(start_tick, end_tick, 20)]))
     else:
-        logger.debug("Found first hostilities tick {} (center_tick {}, room_name {})".format(
+        logger.debug("Found first hostilities tick {} (center_tick {}, room_name {})!".format(
             first_hostilities_tick, center_tick, room_name))
     if first_hostilities_tick is None:
         logger.debug("Couldn't find last hostilities tick with center_tick={} in {}".format(center_tick, room_name))
