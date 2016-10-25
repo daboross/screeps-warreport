@@ -5,7 +5,7 @@ from warreport import redis_conn as redis, screeps_api, data_caching, screeps_in
 
 _LAST_CHECKED_TICK_KEY = "screeps:warreport:last-checked-tick"
 _LAST_CHECKED_EXPIRE_SECONDS = 30 * 60
-_SEND_TO_BACK_OF_QUEUE_IF_OLDER_THAN_TICKS = 2000
+_SEND_TO_BACK_OF_QUEUE_IF_OLDER_THAN_TICKS = 1000
 
 logger = logging.getLogger("warreport")
 

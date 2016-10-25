@@ -45,7 +45,7 @@ def should_report(battle_info):
     if len(battle_info['player_counts']) < 2:
         return False
     # Don't report a single civilian or scout walking into someone's owned room and being shot down
-    if not any((role != civilian and role != scout for role in creeps.keys())
+    if not any(any(role != civilian and role != scout for role in creeps.keys())
                for player, creeps in battle_info['player_counts'].items() if battle_info.get('owner') != player):
         return False
     return True

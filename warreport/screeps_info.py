@@ -100,7 +100,8 @@ def get_battle_data(room_name, center_tick):
                     action_log = obj_data.get('action_log')
                     if action_log and (action_log.get('attack') or action_log.get('rangedAttack')
                                        or action_log.get('rangedMassAttack')
-                                       or action_log.get('heal') or action_log.get('rangedHeal')):
+                                       or action_log.get('heal') or action_log.get('rangedHeal')
+                                       or action_log.get('attacked') or action_log.get('healed')):
                         if first_hostilities_tick is None or tick < first_hostilities_tick:
                             first_hostilities_tick = tick
                         if last_hostilities_tick is None or tick > last_hostilities_tick:
@@ -149,6 +150,7 @@ def identify_creep(creep_obj):
     attack = has('attack')
     work = has('work')
     carry = has('carry')
+    claim = has('claim')
     if ranged and not attack:
         return ranged_attacker
     elif attack and not ranged:
@@ -159,7 +161,7 @@ def identify_creep(creep_obj):
         return dismantling_attacker
     elif (ranged or heal or attack) and not carry:
         return general_attacker
-    elif (work or carry) and not heal and not ranged and not attack:
+    elif (work or carry or claim) and not heal and not ranged and not attack:
         return civilian
     elif all(x.get('type') == 'move' for x in body):
         return scout
