@@ -14,9 +14,8 @@ Any and all contributions welcome!
 To run, simply install the required depeendencies with `pip install -r requirements.txt`, and then run 
 `python -m warreport` in the project directory!
 
-To stop, simply kill the process with Ctrl+C. This isn't too gracefully handled right now, but since no needed data is
-stored in process memory and race conditions are avoided as much as possible, killing the application should have little
-to no affect on the service.
+To stop, simply kill the process with Ctrl+C, or send a SIGINT or SIGTERM signal. This will gracefully shutdown the
+application.
 
 To add custom configurations, copy `config.default.json` to `config.json` and edit.
 
