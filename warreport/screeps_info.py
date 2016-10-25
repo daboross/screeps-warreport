@@ -61,7 +61,7 @@ def username_from_id(user_id):
                                                    call_result.url))
 
 
-def get_battle_data(room_name, center_tick):
+def get_battle_data(room_name, center_tick, allow_unfinished_results=False):
     center_tick = int(center_tick)
     if center_tick % 60 < 20:
         # start_tick is 60-79 earlier
@@ -89,6 +89,14 @@ def get_battle_data(room_name, center_tick):
     for tick_to_call in range(start_tick, end_tick, 20):
         result = requests.get(HISTORY_URL_FORMAT.format(room=room_name, tick=tick_to_call))
         if result.status_code == 404:
+            if allow_unfinished_results and tick_to_call != (center_tick - center_tick % 20):
+                # This is because we may just have tried to access a battle which _didn't continue to go on_.
+                # The screeps server won't generate any history if there aren't any creeps in the room, so if we've been
+                # given the `allow_unfinished_results` parameter and this isn't the tick which we know for certain
+                # contained hostilities, let's just continue checking the rest of the ticks.
+                logger.debug("Skipping 20-tick segment {} for room {}: over 10000 ticks in the past, history will"
+                             " likely never be generated.".format(tick_to_call, room_name))
+                continue
             logger.debug("Checked data for room {} tick {}: not generated yet (404).".format(room_name, tick_to_call))
             data_caching.set_battle_data_not_yet_avail(room_name, start_tick)
             return None

@@ -20,6 +20,7 @@ def grab_new_battles(loop):
     """
     last_grabbed_tick = yield from loop.run_in_executor(None, redis.get, _LAST_CHECKED_TICK_KEY)
     while True:
+        logger.debug("Grabbing battles.")
         try:
             if last_grabbed_tick is not None:
                 battles = yield from loop.run_in_executor(None, partial(screeps_info.grab_battles_uncached,
@@ -30,8 +31,12 @@ def grab_new_battles(loop):
         except ScreepsError as e:
             logging.warning("Error accessing battles API: {}".format(e))
         else:
+            grabbed_from = last_grabbed_tick
             last_grabbed_tick = battles.get('time')
             if len(battles['rooms']):
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug("Found {} new battles in the last {} ticks.".format(
+                        len(battles['rooms']), int(last_grabbed_tick) - int(grabbed_from) if grabbed_from else 2000))
                 yield from asyncio.gather(
                     loop.run_in_executor(None, partial(redis.set, _LAST_CHECKED_TICK_KEY, last_grabbed_tick,
                                                        ex=_LAST_CHECKED_EXPIRE_SECONDS)),
@@ -39,6 +44,9 @@ def grab_new_battles(loop):
                                          ((obj['_id'], obj['lastPvpTime']) for obj in battles['rooms'])),
                     loop=loop
                 )
+            elif logger.isEnabledFor(logging.DEBUG):
+                logger.debug("Found no new battles in the last {} ticks.".format(
+                    int(last_grabbed_tick) - int(grabbed_from) if grabbed_from else 2000))
         yield from asyncio.sleep(60, loop=loop)
 
 
@@ -51,8 +59,12 @@ def process_battles(loop):
         room_name, hostilities_tick, database_key = yield from loop.run_in_executor(
             None, queuing.get_next_battle_to_process)
 
+        latest_tick = yield from loop.run_in_executor(None, redis.get, _LAST_CHECKED_TICK_KEY)
+        allow_unfinished = latest_tick is not None and int(latest_tick) - int(hostilities_tick) > 10000
+
         battle_info = yield from loop.run_in_executor(None, partial(screeps_info.get_battle_data,
-                                                                    room_name, hostilities_tick))
+                                                                    room_name, hostilities_tick,
+                                                                    allow_unfinished_results=allow_unfinished))
 
         if battle_info is None:
             # If we continue without sending queuing a finished battle, the battle will simply be sent to the back of
