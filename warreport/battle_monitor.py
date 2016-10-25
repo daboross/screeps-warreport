@@ -40,7 +40,7 @@ def grab_new_battles(loop):
                                                         for obj in battles['rooms']))),
                     loop=loop
                 )
-        yield from asyncio.sleep(5 * 60, loop=loop)
+        yield from asyncio.sleep(60, loop=loop)
 
 
 @asyncio.coroutine

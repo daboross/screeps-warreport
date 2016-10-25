@@ -32,7 +32,7 @@ def report_battles(loop):
                 if slack_response.status_code != 200:
                     logger.error("Couldn't post to slack! {} ({}, for payload {})"
                                  .format(slack_response.text, slack_response.status_code, payload))
-                    yield from asyncio.sleep(60)  # Try again in 30 seconds.
+                    yield from asyncio.sleep(60, loop=loop)  # Try again in 30 seconds.
                     continue  # < don't mark as finished
         else:
             logger.debug("Skipping battle in {} at {} ({}).".format(battle_info['room'],
@@ -71,7 +71,9 @@ def describe_room(battle_info):
 
 
 def describe_battle(battle_info):
-    items_list = sorted(battle_info['player_counts'].items(), key=lambda t: t[0])
+    # Sort by a tuple of (not the owner, username) so that the owner of a room always comes first.
+    items_list = sorted(battle_info['player_counts'].items(),
+                        key=lambda t: (t[0] != battle_info.get('owner'), t[0]))
     return " vs. ".join("{} ({})".format(
         name,
         ", ".join("{} {}{}".format(count, type, 's' if count > 1 else '')
