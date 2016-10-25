@@ -8,8 +8,11 @@ from warreport.constants import scout, civilian, general_attacker, dismantling_a
     ranged_attacker
 from . import data_caching
 
-USERNAME_URL_FORMAT = "https://screeps.com/api/user/find?id={user_id}"
-HISTORY_URL_FORMAT = "https://screeps.com/room-history/{room}/{tick}.json"
+_URL_ROOT = "https://screeps.com/"
+
+USERNAME_URL_FORMAT = _URL_ROOT + "api/user/find"
+HISTORY_URL_FORMAT = _URL_ROOT + "room-history/{room}/{tick}.json"
+BATTLES_URL_FORMAT = _URL_ROOT + "api/experimental/pvp"
 
 logger = logging.getLogger("warreport")
 
@@ -22,11 +25,31 @@ class ScreepsError(Exception):
         return self.message
 
 
+def grab_battles_uncached(since_tick=None, interval=None):
+    if since_tick is not None:
+        params = {'sinceTick': since_tick}
+    elif interval is not None:
+        params = {'interval': interval}
+    else:
+        return None
+    result = requests.get(BATTLES_URL_FORMAT, params=params)
+    if not result.ok:
+        raise ScreepsError("{} ({}, at {})".format(result.text, result.status_code, result.url))
+
+    json = result.json()
+    if not json:
+        raise ScreepsError("Invalid json: {} ({}, at {})".format(result.text, result.status_code, result.url))
+    if not json.get('ok'):
+        raise ScreepsError("Result without 'ok' property: {} ({}, at {})".format(result.text, result.status_code,
+                                                                                 result.url))
+    return json
+
+
 def username_from_id(user_id):
     cached = data_caching.get_username(user_id)
     if cached is not None:
         return cached
-    call_result = requests.get(USERNAME_URL_FORMAT.format(user_id=user_id))
+    call_result = requests.get(USERNAME_URL_FORMAT, params={'user_id': user_id})
     if call_result.ok:
         name = call_result.json().get('user', {}).get('username', None)
         if name is None:

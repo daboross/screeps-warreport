@@ -2,4 +2,3 @@ requests
 flask
 redis
 hiredis
--e git+https://github.com/tedivm/python-screeps.git@808d673f2f0048f15299e137b242de40d3538278#egg=screepsapi

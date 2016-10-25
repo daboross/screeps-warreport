@@ -3,7 +3,8 @@ import logging
 
 from functools import partial
 
-from warreport import redis_conn as redis, screeps_api, data_caching, screeps_info
+from warreport import redis_conn as redis, data_caching, screeps_info
+from warreport.screeps_info import ScreepsError
 
 _LAST_CHECKED_TICK_KEY = "screeps:warreport:last-checked-tick"
 _LAST_CHECKED_EXPIRE_SECONDS = 30 * 60
@@ -19,11 +20,16 @@ def grab_new_battles(loop):
     """
     last_grabbed_tick = yield from loop.run_in_executor(None, redis.get, _LAST_CHECKED_TICK_KEY)
     while True:
-        if last_grabbed_tick is not None:
-            battles = yield from loop.run_in_executor(None, partial(screeps_api.battles, sinceTick=last_grabbed_tick))
+        try:
+            if last_grabbed_tick is not None:
+                battles = yield from loop.run_in_executor(None, partial(screeps_info.grab_battles_uncached,
+                                                                        since_tick=last_grabbed_tick))
+            else:
+                battles = yield from loop.run_in_executor(None, partial(screeps_info.grab_battles_uncached,
+                                                                        interval=2000))
+        except ScreepsError as e:
+            logging.warning("Error accessing battles API: {}".format(e))
         else:
-            battles = yield from loop.run_in_executor(None, partial(screeps_api.battles, interval=2000))
-        if battles and battles.get('ok'):
             last_grabbed_tick = battles.get('time')
             if len(battles['rooms']):
                 yield from asyncio.gather(

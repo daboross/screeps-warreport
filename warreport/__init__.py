@@ -3,9 +3,7 @@ import logging.config
 
 import os
 import redis
-from screepsapi import screepsapi
 
-screeps_api = screepsapi.API()
 SLACK_URL = None
 redis_conn = None
 
