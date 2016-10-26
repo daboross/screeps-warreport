@@ -27,11 +27,11 @@ class ScreepsError(Exception):
 
 def grab_battles(since_tick=None, interval=None):
     if since_tick is not None:
-        params = {'sinceTick': since_tick}
+        params = {'start': since_tick}
     elif interval is not None:
         params = {'interval': interval}
     else:
-        return None
+        raise ScreepsError("Invalid arguments: must provide one of since_tick, interval")
     result = requests.get(BATTLES_URL_FORMAT, params=params)
     if not result.ok:
         raise ScreepsError("{} ({}, at {})".format(result.text, result.status_code, result.url))
