@@ -49,7 +49,7 @@ def grab_new_battles(loop):
             elif logger.isEnabledFor(logging.DEBUG):
                 logger.debug("Found no new battles in the last {} ticks.".format(
                     int(last_grabbed_tick) - int(grabbed_from) if grabbed_from else 2000))
-        yield from asyncio.sleep(60, loop=loop)
+        yield from asyncio.sleep(60 * 15, loop=loop)
 
 
 @asyncio.coroutine
