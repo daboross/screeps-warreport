@@ -7,7 +7,7 @@ from warreport import redis_conn, screeps_info, queuing, DATABASE_PREFIX
 from warreport.screeps_info import ScreepsError
 
 _LAST_CHECKED_TICK_KEY = DATABASE_PREFIX + "last-checked-tick"
-_LAST_CHECKED_EXPIRE_SECONDS = 30 * 60
+_LAST_CHECKED_EXPIRE_SECONDS = 60 * 60
 _SEND_TO_BACK_OF_QUEUE_IF_OLDER_THAN_TICKS = 1000
 
 logger = logging.getLogger("warreport")
@@ -19,12 +19,12 @@ def grab_new_battles(loop):
     :type loop: asyncio.events.AbstractEventLoop
     """
     last_grabbed_tick = yield from loop.run_in_executor(None, redis_conn.get, _LAST_CHECKED_TICK_KEY)
+    if last_grabbed_tick:
+        last_grabbed_tick = int(last_grabbed_tick)
     while True:
         logger.debug("Grabbing battles.")
         try:
             if last_grabbed_tick is not None:
-                # redis replies give byte strings - turn it into an int.
-                last_grabbed_tick = int(last_grabbed_tick) - 1
                 battles = yield from loop.run_in_executor(None, partial(screeps_info.grab_battles,
                                                                         since_tick=last_grabbed_tick))
             else:
@@ -34,7 +34,7 @@ def grab_new_battles(loop):
             logging.warning("Error accessing battles API: {}".format(e))
         else:
             grabbed_from = last_grabbed_tick
-            last_grabbed_tick = battles.get('time')
+            last_grabbed_tick = int(battles['time'])
             if len(battles['rooms']):
                 if logger.isEnabledFor(logging.DEBUG):
                     logger.debug("Found {} new battles in the last {} ticks.".format(

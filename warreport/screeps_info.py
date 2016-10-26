@@ -165,7 +165,7 @@ def get_battle_data(room_name, center_tick, allow_unfinished_results=False):
     if room_level:
         battle_data['rcl'] = room_level
     if first_hostilities_tick and last_hostilities_tick:
-        battle_data['duration'] = last_hostilities_tick - first_hostilities_tick
+        battle_data['duration'] = last_hostilities_tick - first_hostilities_tick + 1
     return battle_data
 
 
