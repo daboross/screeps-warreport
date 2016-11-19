@@ -80,6 +80,7 @@ def submit_processed_battle(room_name, battle_info_dict):
     """
     pipe = redis_conn.pipeline()
     pipe.lrem(PROCESSING_QUEUE, -1, room_name)
+    pipe.srem(PROCESSING_QUEUE_SET, room_name)
     pipe.delete(BATTLE_DATA_KEY.format(room_name))
     if 'latest_hostilities_detected' in battle_info_dict:
         pipe.lpush(REPORTING_QUEUE, json.dumps(battle_info_dict))
