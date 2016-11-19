@@ -110,5 +110,3 @@ def _setup():
 
 
 _setup()
-
-from . import constants, data_caching, queuing, screeps_info, battle_monitor, battle_reporting

@@ -36,21 +36,22 @@ def report_battles(loop):
                     # once we've reported everything else.
                     yield from asyncio.sleep(60, loop=loop)
                     continue  # < don't mark as finished
-            logger.debug("Reported battle {}:{}!".format(battle_info['room'], battle_info['hostilities_tick']))
+            logger.debug("Reported battle {}:{}!".format(battle_info['room'],
+                                                         battle_info['latest_hostilities_detected']))
         else:
             logger.debug("Skipping battle {}:{} ({}).".format(battle_info['room'],
-                                                              battle_info['hostilities_tick'],
+                                                              battle_info['latest_hostilities_detected'],
                                                               describe_battle(battle_info)))
         yield from loop.run_in_executor(None, queuing.mark_battle_reported, database_key)
 
 
 def should_report(battle_info):
     # Don't report a single player dismantling their own things
-    if len(battle_info['player_counts']) < 2:
+    if len(battle_info['player_creep_counts']) < 2:
         return False
     # Don't report a single civilian or scout walking into someone's owned room and being shot down
     if not any(any(role != civilian and role != scout for role in creeps.keys())
-               for player, creeps in battle_info['player_counts'].items() if battle_info.get('owner') != player):
+               for player, creeps in battle_info['player_creep_counts'].items() if battle_info.get('owner') != player):
         return False
     return True
 
@@ -58,22 +59,36 @@ def should_report(battle_info):
 def format_message(battle_info):
     room_name = battle_info['room']
 
-    return "<https://screeps.com/a/#!/history/{}?t={}|{}{}>: {} tick battle{}: {}".format(
-        room_name, int(battle_info['hostilities_tick']) - 5, room_name,
-        describe_rcl(battle_info), describe_duration(battle_info),
-        describe_defender(battle_info), describe_battle(battle_info))
+    # Current ideal format:
+    # TooAngel (AllianceName) vs DT (AllianceName) - 239 tick battle: TooAngel's 4 civilians and 1 ranged attacker \
+    # vs. DarkTropper7's 1 dismantler, 1 general attacker and 1 healer, <link>E12S1 at 123322323</link>
+
+    tick = int(battle_info['earliest_hostilities_detected']) - 5
+
+    return "{} - {} tick battle: {}, <https://screeps.com/a/#!/history/{}?t={}|{} at {}>".format(
+        describe_conflict(battle_info), describe_duration(battle_info), describe_battle(battle_info),
+        room_name, tick, room_name, tick)
 
 
-def describe_rcl(battle_info):
-    if 'rcl' in battle_info:
-        return " (RCL {})".format(battle_info['rcl'])
-    else:
-        return ""
+def describe_conflict(battle_info):
+    return " vs ".join(
+        "{}{}".format(username,
+                      (" ({}, RCL {})".format(alliance, battle_info['rcl'])
+                       if username == battle_info['owner']
+                       else " ({})".format(alliance))
+                      if alliance is not None else
+                      (" (RCL {})".format(battle_info['rcl'])
+                       if username == battle_info['owner']
+                       else ""))
+        for username, alliance in battle_info['alliances'].items())
 
 
 def describe_duration(battle_info):
     if 'duration' in battle_info:
-        return "{0:03d}".format(battle_info['duration'])
+        if battle_info['battle_still_ongoing']:
+            return "{0:03d}+".format(battle_info['duration'])
+        else:
+            return "{0:03d}".format(battle_info['duration'])
     else:
         return "???"
 
@@ -87,9 +102,9 @@ def describe_defender(battle_info):
 
 def describe_battle(battle_info):
     # Sort by a tuple of (not the owner, username) so that the owner of a room always comes first.
-    items_list = sorted(battle_info['player_counts'].items(),
+    items_list = sorted(battle_info['player_creep_counts'].items(),
                         key=lambda t: (t[0] != battle_info.get('owner'), t[0]))
-    return " vs. ".join("{}'s {}".format(name, describe_player_creep_list(parts)) for name, parts in items_list)
+    return " vs ".join("{}'s {}".format(name, describe_player_creep_list(parts)) for name, parts in items_list)
 
 
 def describe_player_creep_list(creeps):
