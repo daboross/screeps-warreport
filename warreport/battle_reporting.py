@@ -11,7 +11,7 @@ logger = logging.getLogger("warreport")
 
 
 @asyncio.coroutine
-def report_battles(loop):
+def process_and_requeue_reports(loop):
     """
     :type loop: asyncio.events.AbstractEventLoop
     """

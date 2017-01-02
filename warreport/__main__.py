@@ -3,6 +3,7 @@ import logging
 
 import os
 
+import warreport
 from warreport import battle_monitor, battle_reporting
 
 logger = logging.getLogger("warreport")
@@ -15,7 +16,7 @@ def main():
     gathered_future = asyncio.gather(
         battle_monitor.grab_new_battles(loop),
         battle_monitor.process_battles(loop),
-        battle_reporting.report_battles(loop),
+        battle_reporting.process_and_requeue_reports(loop),
         loop=loop,
     )
     try:
@@ -25,11 +26,14 @@ def main():
         gathered_future.cancel()
         loop.run_forever()
         gathered_future.exception()
+    except Exception:
+        logger.exception("Caught exception: Ending main loop.")
+        loop.close()
+        os._exit(1)
     finally:
         loop.close()
     logger.info("Ended successfully.")
-    # TODO: this is basically so I don't have to Ctrl+C twice to exit. I don't know what holds up the process, and it
-    # would definitely be a good idea to find out!
+    # OS exit here in order to forcefully kill off any outstanding threaded blocking redis requests.
     os._exit(0)
 
 

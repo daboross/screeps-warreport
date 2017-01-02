@@ -1,0 +1,13 @@
+# Basic systemd service file
+[Unit]
+Description=A small service which gathers and reports battles occurring in screeps.
+After=network.target redis-server.service
+
+[Service]
+Type=simple
+ExecStart=/opt/LeagueBot/bin/screeps_slack_alerts.sh
+TimeoutStopSec=5
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

@@ -35,7 +35,3 @@ This is the hard deadline where no more history collection will be attempted (if
 after the last known hostilities (or the first hostilities if no history has been found), give up.)
 """
 KEEP_IN_QUEUE_FOR_MAX_TICKS_UNSUCCESSFUL = 2000
-
-"""
-How many ticks of no hostilities should we just go ahead and report a battle.
-"""

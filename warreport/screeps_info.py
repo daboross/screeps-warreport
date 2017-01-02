@@ -85,8 +85,9 @@ def grab_history(room, tick):
     try:
         json = result.json()
     except ValueError:
-        logger.exception("Error loading battles json! JSON text: {}".format(result.text))
-        json = None
+        logger.exception("Invalid JSON data from {} ({}). Ignoring, and returning an empty data set."
+                         .format(result.url, result.text))
+        return {'ticks': {}}
 
     if not json:
         raise ScreepsError("Invalid json: {} ({}, at {})".format(result.text, result.status_code, result.url))
@@ -242,7 +243,8 @@ def work_on_room_data(room_name, current_tick):
         tick_to_call += 20
 
     if found_end:
-        logger.debug("Ended. Found end, submitting!")
+        logger.debug("Ended. Found end{}, submitting!"
+                     .format(" (of ongoing battle)" if battle_data['battle_still_ongoing'] else ""))
         # Finished! Let's clean up the data, then return it!
         del battle_data['creeps_found']
         del battle_data['stop_checking_at']
