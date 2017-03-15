@@ -1,6 +1,11 @@
 screeps-warreport
 =================
 
+DEPRECATED in favor of https://github.com/LeagueOfAutomatedNations/LeagueBot.
+
+------
+
+
 Screeps WarReport is a small standalone server application which tracks all recent battles in
 [screeps.com](https://screeps.com), and includes various data from room history.
 
